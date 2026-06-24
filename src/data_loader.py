@@ -3,11 +3,9 @@ import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 
-
 def load_candidates(path: str) -> pd.DataFrame:
     """Load all candidates from jsonl file into a flat DataFrame."""
     records = []
-
     with open(path, "r", encoding="utf-8") as f:
         for line in tqdm(f, desc="Loading candidates"):
             raw = json.loads(line)
@@ -18,7 +16,6 @@ def load_candidates(path: str) -> pd.DataFrame:
             career = raw.get("career_history", [])
             education = raw.get("education", [])
 
-            # Skills
             skill_names = [
                 s.get("name", "").lower()
                 for s in skills
@@ -36,7 +33,6 @@ def load_candidates(path: str) -> pd.DataFrame:
                 for s in skills
             )
 
-            # Career
             all_descriptions = " ".join(
                 c.get("description", "")
                 for c in career
@@ -57,7 +53,6 @@ def load_candidates(path: str) -> pd.DataFrame:
 
             career_jobs_count = len(career)
 
-            # Consulting-only flag
             consulting_firms = {
                 "tcs",
                 "infosys",
@@ -81,7 +76,6 @@ def load_candidates(path: str) -> pd.DataFrame:
                 and companies_worked.issubset(consulting_firms)
             )
 
-            # Education
             tier_map = {
                 "tier_1": 1,
                 "tier_2": 2,
@@ -99,7 +93,6 @@ def load_candidates(path: str) -> pd.DataFrame:
 
             best_tier = min(tiers) if tiers else 4
 
-            # Salary
             sal = signals.get(
                 "expected_salary_range_inr_lpa",
                 {},
@@ -111,7 +104,6 @@ def load_candidates(path: str) -> pd.DataFrame:
             if sal_min > sal_max:
                 sal_min, sal_max = sal_max, sal_min
 
-            # Full text
             full_text = " ".join(
                 [
                     p.get("headline", ""),
@@ -122,7 +114,6 @@ def load_candidates(path: str) -> pd.DataFrame:
                 ]
             )
 
-            # Parse date once
             last_active_date = signals.get(
                 "last_active_date",
                 None,
@@ -135,14 +126,12 @@ def load_candidates(path: str) -> pd.DataFrame:
 
             records.append(
                 {
-                    # Identity
                     "candidate_id": raw["candidate_id"],
                     "name": p.get(
                         "anonymized_name",
                         "",
                     ),
 
-                    # Profile
                     "headline": p.get("headline", ""),
                     "summary": p.get("summary", ""),
                     "location": p.get("location", ""),
@@ -164,7 +153,6 @@ def load_candidates(path: str) -> pd.DataFrame:
                         "",
                     ),
 
-                    # Skills
                     "skill_names": skill_names,
                     "skill_advanced": skill_advanced,
                     "skill_count": len(skill_names),
@@ -172,23 +160,17 @@ def load_candidates(path: str) -> pd.DataFrame:
                         skill_advanced
                     ),
                     "total_endorsements": total_endorsements,
-                    # Career
                     "all_descriptions": all_descriptions,
                     "all_titles": all_titles,
                     "industries": industries,
                     "career_jobs_count": career_jobs_count,
                     "only_consulting": only_consulting,
-                    # Preserve raw data
                     "career_history": career,
                     "education_history": education,
-                    # Education
                     "best_edu_tier": best_tier,
-                    # Text
                     "full_text": full_text,
-                    # Dates
                     "last_active_date": last_active_date,
                     "last_active_dt": last_active_dt,
-                    # Signals
                     "profile_completeness": signals.get(
                         "profile_completeness_score",0,),
                     "open_to_work": signals.get(
@@ -212,7 +194,6 @@ def load_candidates(path: str) -> pd.DataFrame:
                     "sal_min": sal_min,
                     "sal_max": sal_max,
                     "skill_assessment_scores": signals.get("skill_assessment_scores",{},),
-                    # Preserve all signals
                     "raw_signals": signals,
                 }
             )

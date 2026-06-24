@@ -1,12 +1,10 @@
 """
 Candidate scoring for the Senior AI Engineer role at Redrob AI.
 Primary signal: evidence of retrieval, ranking, and search-relevance work in
-career descriptions — NOT raw AI keyword counts on skill lists.
 """
 from __future__ import annotations
 import pandas as pd
 from datetime import datetime
-# ── Backward-compat exports (used by reasoning.py & data_quality.py) ─────────
 CORE_AI_SKILLS = {
     "embeddings", "sentence-transformers", "vector search", "faiss", "milvus",
     "pinecone", "qdrant", "weaviate", "opensearch", "elasticsearch",
@@ -45,8 +43,6 @@ PREFERRED_LOCATIONS = {
     "pune", "noida", "hyderabad", "mumbai", "delhi", "bangalore",
     "bengaluru", "gurgaon", "gurugram", "india",
 }
-# ── Career-text keyword groups (strongest JD signals) ────────────────────────
-
 RETRIEVAL_SEARCH_KEYWORDS = (
     "information retrieval", "retrieval system", "retrieval pipeline",
     "search system", "search engine", "search infrastructure",
@@ -57,7 +53,6 @@ RETRIEVAL_SEARCH_KEYWORDS = (
     "elasticsearch", "approximate nearest neighbor", "ann index",
     "inverted index", "query understanding", "indexing pipeline",
 )
-
 RANKING_RECOMMENDATION_KEYWORDS = (
     "learning to rank", "learning-to-rank", "ltr model", "ltr pipeline",
     "ranking model", "ranking system", "ranking pipeline", "reranking",
@@ -67,7 +62,6 @@ RANKING_RECOMMENDATION_KEYWORDS = (
     "feed ranking", "two-tower", "two tower", "click-through rate",
     "conversion ranking",
 )
-
 PRODUCTION_ML_KEYWORDS = (
     "production ml", "production model", "production deployment",
     "model serving", "model deployment", "serving infrastructure",
@@ -77,7 +71,6 @@ PRODUCTION_ML_KEYWORDS = (
     "a/b test", "ab test", "experiment platform", "online serving",
     "low-latency inference", "scalable ml", "end-to-end ml",
 )
-
 EVALUATION_METRICS_KEYWORDS = (
     "ndcg", "mrr", "map@", "map score", "mean average precision",
     "precision@", "recall@", "hit rate", "offline evaluation",
@@ -85,39 +78,36 @@ EVALUATION_METRICS_KEYWORDS = (
     "relevance evaluation", "evaluation framework", "benchmark suite",
     "human evaluation", "interleaving", "counterfactual evaluation",
 )
-# ── Scoring weights (retrieval/ranking is dominant) ──────────────────────────
 WEIGHTS = {
-    "retrieval":     0.34,   # career evidence of IR / search / ranking work
-    "stability":     0.16,   # product co. background, tenure, title trajectory
-    "recruiter":     0.14,   # platform engagement from recruiters
-    "availability":  0.12,   # notice period, activity, open-to-work
-    "verification":  0.08,   # assessments + identity verification
-    "experience":    0.08,   # YoE band fit (5–9 ideal)
-    "skills":        0.04,   # deliberately low — skills list alone is weak
+    "retrieval":     0.34,   
+    "stability":     0.16,   
+    "recruiter":     0.14,   
+    "availability":  0.12,   
+    "verification":  0.08,   
+    "experience":    0.08,   
+    "skills":        0.04,   
     "location":      0.02,
     "education":     0.02,
 }
-# Per-flag trust reduction applied inside score_all (on top of trust_score)
 ANOMALY_PENALTY_PER_FLAG = 0.025
 ANOMALY_PENALTY_FLOOR = 0.70
-# ── Helpers ──────────────────────────────────────────────────────────────────
+
 def _career_text(row) -> str:
     """Career descriptions — highest-trust signal for project experience."""
     return (row.get("all_descriptions") or "").lower()
-
 
 def _profile_text(row) -> str:
     """Headline, summary, titles, and career text combined."""
     return (row.get("full_text") or "").lower()
 
-
 def _count_hits(text: str, keywords: tuple[str, ...]) -> int:
     if not text:
         return 0
     return sum(1 for kw in keywords if kw in text)
+
 def _group_score(hit_count: int, cap: int = 4) -> float:
-    """Diminishing returns: first few keyword hits matter most."""
     return min(hit_count / cap, 1.0)
+
 def _keyword_group_scores(text: str) -> dict[str, float]:
     return {
         "retrieval":  _group_score(_count_hits(text, RETRIEVAL_SEARCH_KEYWORDS)),
@@ -125,32 +115,23 @@ def _keyword_group_scores(text: str) -> dict[str, float]:
         "production": _group_score(_count_hits(text, PRODUCTION_ML_KEYWORDS)),
         "evaluation": _group_score(_count_hits(text, EVALUATION_METRICS_KEYWORDS)),
     }
+
 def _combine_group_scores(groups: dict[str, float]) -> float:
-    """
-    Weighted blend of keyword-group scores.
-    Retrieval + ranking dominate; production + evaluation confirm depth.
-    """
     base = (
         groups["retrieval"]  * 0.38 +
         groups["ranking"]    * 0.32 +
         groups["production"] * 0.18 +
         groups["evaluation"] * 0.12
     )
-    # Bonus when evidence spans multiple domains (real systems work)
     active_groups = sum(1 for v in groups.values() if v >= 0.25)
     breadth_bonus = {0: 0.0, 1: 0.0, 2: 0.06, 3: 0.12, 4: 0.18}.get(active_groups, 0.18)
     return min(base + breadth_bonus, 1.0)
-# ── New primary scoring functions ────────────────────────────────────────────
 
 def score_retrieval_ranking(row) -> float:
-    """
-    Score evidence of retrieval, ranking, recommendation, and search-relevance
-    work from career descriptions and project text — NOT skill tags alone.
-    """
+    
     career = _career_text(row)
     profile = _profile_text(row)
 
-    # Career descriptions carry 75 % of the signal; summary/headline 25 %
     career_groups = _keyword_group_scores(career)
     profile_groups = _keyword_group_scores(profile)
 
@@ -160,7 +141,6 @@ def score_retrieval_ranking(row) -> float:
     }
     score = _combine_group_scores(blended_groups)
 
-    # Small supplementary boost when structured skills corroborate career text
     skills = set(row.get("skill_names") or [])
     corroborating = skills & {
         "information retrieval", "vector search", "learning to rank",
@@ -170,7 +150,6 @@ def score_retrieval_ranking(row) -> float:
     if corroborating and score >= 0.20:
         score = min(score + len(corroborating) * 0.02, 1.0)
 
-    # Penalise keyword-stuffing: many AI skills listed but zero career evidence
     career_total_hits = sum(_count_hits(career, g) for g in (
         RETRIEVAL_SEARCH_KEYWORDS, RANKING_RECOMMENDATION_KEYWORDS,
         PRODUCTION_ML_KEYWORDS, EVALUATION_METRICS_KEYWORDS,
@@ -181,7 +160,6 @@ def score_retrieval_ranking(row) -> float:
     elif skill_ai_count >= 4 and career_total_hits <= 1:
         score *= 0.60
 
-    # Title boost for search/ranking engineers with real career evidence
     current = (row.get("current_title") or "").lower()
     search_titles = {"search engineer", "ranking engineer", "recommendation engineer",
                      "ml engineer", "machine learning engineer", "ai engineer"}
@@ -190,7 +168,6 @@ def score_retrieval_ranking(row) -> float:
 
     return min(score, 1.0)
 def score_recruiter_interest(row) -> float:
-    """Recruiter-side engagement: saves, views, response rate, open-to-work."""
     score = 0.0
 
     rr = min(row.get("recruiter_response_rate", 0), 1.0)
@@ -206,7 +183,6 @@ def score_recruiter_interest(row) -> float:
 
     if row.get("open_to_work", False):
         score += 0.10
-    # Fast response time is a positive recruiter signal
     avg_hours = row.get("avg_response_time_hours", 999)
     if avg_hours <= 24:
         score += 0.05
@@ -215,10 +191,6 @@ def score_recruiter_interest(row) -> float:
 
     return min(score, 1.0)
 def score_stability(row) -> float:
-    """
-    Career stability and company-type fit.
-    Product-company experience preferred; pure consulting penalised.
-    """
     score = 0.0
 
     current = (row.get("current_title") or "").lower()
@@ -234,13 +206,11 @@ def score_stability(row) -> float:
     good_past = sum(1 for t in GOOD_TITLES if t in all_titles)
     score += min(good_past * 0.06, 0.18)
 
-    # Product-company vs consulting
     if row.get("only_consulting", False):
         score *= 0.45
     else:
         score += 0.25
 
-    # Tenure stability from career_history durations
     history = row.get("career_history") or []
     if history:
         durations = [j.get("duration_months", 0) for j in history if j.get("duration_months")]
@@ -333,10 +303,8 @@ def score_availability(row) -> float:
         score += 0.03
 
     return min(score, 1.0)
-# ── Supporting scoring functions (reduced weight) ────────────────────────────
 
 def score_skills(row) -> float:
-    """Lightweight skill-list check — supplementary only, not primary."""
     skills = set(row.get("skill_names") or [])
     advanced = set(row.get("skill_advanced") or [])
 
@@ -354,7 +322,6 @@ def score_skills(row) -> float:
     bonus = min(len(skills & BONUS_SKILLS) * 0.02, 0.10)
     return min(base + bonus, 1.0)
 def score_experience(row) -> float:
-    """YoE band fit — 5–9 years ideal for Senior AI Engineer."""
     yoe = row.get("years_of_experience", 0)
     if 5 <= yoe <= 9:
         return 1.0
@@ -379,10 +346,9 @@ def score_location(row) -> float:
     if row.get("willing_to_relocate", False):
         return 0.70
     return 0.40
-# ── Master scoring ───────────────────────────────────────────────────────────
 
 def score_candidate(row) -> dict:
-    """Compute all component scores and return breakdown dict."""
+    """Compute all component score"""
     s_retrieval    = score_retrieval_ranking(row)
     s_recruiter    = score_recruiter_interest(row)
     s_stability    = score_stability(row)

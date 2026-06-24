@@ -37,21 +37,17 @@ def run_pipeline(
     print("\n[4/4] Building submission CSV...")
     top["rank"] = range(1, top_k + 1)
 
-    # Round scores to 4 decimal places
-    # Ensure scores are strictly non-increasing (validator requirement)
     scores = top["score"].values.copy()
     for i in range(1, len(scores)):
         if scores[i] > scores[i - 1]:
             scores[i] = scores[i - 1]
     top["score"] = [round(float(s), 4) for s in scores]
 
-    # Sort by score desc, then candidate_id asc for tie-breaking
     top = top.sort_values(["score", "candidate_id"], ascending=[False, True]).reset_index(drop=True)
     top["rank"] = range(1, top_k + 1)
 
     submission = top[["candidate_id", "rank", "score", "reasoning"]].copy()
 
-    # Validate before saving
     assert len(submission) == 100, "Must have exactly 100 rows"
     assert list(submission["rank"]) == list(range(1, 101)), "Ranks must be 1-100"
     assert submission["candidate_id"].nunique() == 100, "All candidate IDs must be unique"

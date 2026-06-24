@@ -7,14 +7,11 @@ def generate_reasoning(row) -> str:
     candidate is ranked where they are. Uses only real data from the row.
     """
     parts = []
-
-    # --- Title + Experience ---
     title = row.get("current_title", "Professional")
     yoe = row.get("years_of_experience", 0)
     company = row.get("current_company", "")
     parts.append(f"{title} with {yoe:.1f} years of experience at {company}.")
 
-    # --- Skills highlight ---
     from src.scorer import CORE_AI_SKILLS
     skill_names = set(row.get("skill_names", []))
     matched = skill_names & CORE_AI_SKILLS
@@ -29,7 +26,6 @@ def generate_reasoning(row) -> str:
     else:
         parts.append("Limited AI/ML skill match for this JD.")
 
-    # --- Behavioral signals ---
     signals = []
 
     try:
@@ -75,7 +71,6 @@ def generate_reasoning(row) -> str:
     if signals:
         parts.append("Signals: " + "; ".join(signals) + ".")
 
-    # --- Location ---
     location = row.get("location", "")
     country = row.get("country", "")
     relocate = row.get("willing_to_relocate", False)
@@ -85,10 +80,8 @@ def generate_reasoning(row) -> str:
             loc_note += " (willing to relocate)"
         parts.append(loc_note + ".")
 
-    # Join all parts into 2 clean sentences
     full = " ".join(parts)
 
-    # Trim to ~300 chars to keep CSV clean
     if len(full) > 300:
         full = full[:297] + "..."
 
