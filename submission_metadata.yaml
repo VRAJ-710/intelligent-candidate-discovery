@@ -21,7 +21,7 @@ team_members:
 
 github_repo: "https://github.com/VRAJ-710/intelligent-candidate-discovery"
 
-sandbox_link: "https://huggingface.co/spaces/YOUR_USERNAME/redrob-ranker"
+sandbox_link: "https://intelligent-candidate-discovery.streamlit.app/"
 
 reproduce_command: "python src/pipeline.py"
 
