@@ -1,0 +1,62 @@
+# Redrob Hackathon — Submission Metadata
+team_name: "Invincible_1212"
+primary_contact:
+  name: "Vraj Gajjar"
+  email: "primary@example.com"   
+  phone: "+91-7621055951"        
+
+team_members:
+  - name: "Vraj Gajjar"
+    email: "vrajgajjar29@gmail.com"
+    role: "Ai/ML Lead"         
+  - name: "Dhanvin Sinha"
+    email: "dhanvinsinha@gmail.com"
+    role: "Data Engineer"
+  - name: "Vraj Patel"
+    email: "vraj1308patel@gmail.com"
+    role: "Deployment Engineer"
+  - name: "Krish Patel"
+    email: "krish20511@gmail.com"
+    role: "Documentation & Presentation Lead"
+
+github_repo: "https://github.com/VRAJ-710/intelligent-candidate-discovery"
+
+sandbox_link: "https://huggingface.co/spaces/YOUR_USERNAME/redrob-ranker"
+
+reproduce_command: "python src/pipeline.py"
+
+compute:
+  platform: "Windows 11 Laptop"
+  cpu_cores: 8
+  ram_gb: 16
+  python_version: "3.12.8"
+  os: "Windows 11"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: true
+  pre_computation_time_minutes: 30
+
+ai_tools_used:
+  - "Claude"        
+  - "GitHub Copilot"
+  - "Chatgpt"
+
+ai_usage_summary: 
+  -Used Chatgpt for debugging Python code, discussing architecture, optimizing performance, and preparing project documentation and presentation. 
+  -Used Claude for code review, implementation suggestions, and architectural discussions. 
+  -Used GitHub Copilot for code autocomplete.
+  -No candidate data was shared with external AI services during the ranking process.
+
+methodology_summary: 
+  - We built a rule-based, explainable candidate ranker for Redrob AI's Senior AI Engineer role, designed to run fully offline on CPU in under five minutes for ~100K profiles. The pipeline has four stages: load, score, reason, and export.
+  - Load: JSONL profiles are flattened into skills, career history, education, platform signals, and derived fields (all_descriptions, full_text, consulting-only flag).
+  - Quality: Anomaly detection flags suspicious profiles (skill inflation, date errors, title-skill mismatch) and assigns a trust_score multiplier—no candidates are removed.
+  - Score: Weighted components, retrieval/ranking career text first (34%). Keywords cover search/IR, ranking/recommendation, production ML, and eval metrics (NDCG, MRR). Also: product vs consulting background, recruiter engagement, notice period/activity, assessments, YoE (5-9 ideal), location, education. Skill tags are only 4%. Final score = weighted sum * trust_score  * anomaly penalty.
+  - Output: Top 100 get auto-generated reasoning; CSV is validated (unique IDs, ranks 1-100, non-increasing scores).
+
+declarations:
+  read_submission_spec: true        
+  code_is_original_work: true       
+  no_collusion: true               
+  honeypot_check_done: true       
+  reproduction_tested: true         

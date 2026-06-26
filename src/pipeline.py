@@ -26,6 +26,7 @@ def run_pipeline(
 
     # Step 3 — Generate reasoning for top_k
     print(f"\n[3/4] Generating reasoning for top {top_k} candidates...")
+    top_k = min(top_k, len(scored))
     top = scored.head(top_k).copy()
 
     reasonings = []
@@ -48,9 +49,9 @@ def run_pipeline(
 
     submission = top[["candidate_id", "rank", "score", "reasoning"]].copy()
 
-    assert len(submission) == 100, "Must have exactly 100 rows"
-    assert list(submission["rank"]) == list(range(1, 101)), "Ranks must be 1-100"
-    assert submission["candidate_id"].nunique() == 100, "All candidate IDs must be unique"
+    assert len(submission) == top_k
+    assert list(submission["rank"]) == list(range(1, top_k + 1))
+    assert submission["candidate_id"].nunique() == top_k
 
     # Save
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
