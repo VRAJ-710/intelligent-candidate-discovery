@@ -1,6 +1,6 @@
 # Intelligent Candidate Discovery
 
-An AI-powered candidate ranking system that analyzes candidate profiles against a job description and generates a ranked list of the top candidates with explainable reasoning.
+An  candidate ranking system that analyzes candidate profiles against a job description and generates a ranked list of the top candidates with explainable reasoning.
 
 ---
 
